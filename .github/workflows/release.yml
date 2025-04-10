@@ -39,7 +39,15 @@ jobs:
         run: |
           VERSION=${{ steps.get_version.outputs.VERSION }}
           # 提取对应版本的Changelog内容
-          CHANGELOG_CONTENT=$(awk "/## \\[$VERSION\\]/,/## \\[|$/{print}" CHANGELOG.md | sed -n "/## \\[$VERSION\\]/,/## \\[|$/p" | sed "/## \\[.*\\]/d")
+          SECTION_START=$(grep -n "^## \[$VERSION\]" CHANGELOG.md | cut -d':' -f1)
+          NEXT_SECTION=$(tail -n +$((SECTION_START+1)) CHANGELOG.md | grep -n "^## \[" | head -1 | cut -d':' -f1)
+          if [ -z "$NEXT_SECTION" ]; then
+            # 如果是最后一个版本
+            CHANGELOG_CONTENT=$(tail -n +$((SECTION_START+1)) CHANGELOG.md)
+          else
+            # 如果不是最后一个版本
+            CHANGELOG_CONTENT=$(tail -n +$((SECTION_START+1)) CHANGELOG.md | head -n $((NEXT_SECTION-1)))
+          fi
           # 转换为多行字符串
           echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGELOG_CONTENT" >> $GITHUB_OUTPUT
