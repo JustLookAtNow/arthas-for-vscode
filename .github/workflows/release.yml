@@ -1,0 +1,47 @@
+name: 发布扩展
+
+on:
+  push:
+    tags:
+      - 'v*' # 当推送以v开头的tag时触发
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+        
+      - name: 设置Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: 安装依赖
+        run: npm ci
+        
+      - name: 编译扩展
+        run: npm run compile
+        
+      - name: 打包扩展
+        run: npx vsce package
+        
+      - name: 获取版本号
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        
+      - name: 创建Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: 版本 ${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: ${{ contains(github.ref, 'beta') }}
+          files: "*.vsix"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: 发布到VSCode商店
+        if: ${{ !contains(github.ref, 'beta') }}
+        run: npx vsce publish -p ${{ secrets.VSCODE_PAT }}
