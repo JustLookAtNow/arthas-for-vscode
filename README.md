@@ -15,12 +15,12 @@ VSCode插件，用于快速复制Arthas的watch命令。
    - 将光标放在方法体内的任意位置，然后右键选择"复制 Arthas watch 命令"
 3. 命令会被复制到剪贴板中，格式为：
    ```
-   watch 完整类路径 方法名'{params,returnObj,throwExp}'  -n 5  -x 3
+   watch 完整类路径 方法名 '{params,returnObj,throwExp}'  -n 5  -x 3
    ```
 
 ## 要求
 
-- VSCode 1.50.0 或更高版本
+- VSCode 1.96.0 或更高版本
 
 ## 开发
 

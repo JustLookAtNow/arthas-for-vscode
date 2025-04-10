@@ -1,9 +1,13 @@
 {
   "name": "arthas-for-vscode",
   "displayName": "Arthas for VSCode",
-  "description": "右键复制Arthas watch命令",
+  "description": "右键快捷复制Arthas watch命令",
   "version": "1.0.0",
-  "publisher": "arthas-team",
+  "publisher": "JustLookAtNow",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JustLookAtNow/arthas-for-vscode.git"
+  },
   "engines": {
     "vscode": "^1.96.0"
   },
@@ -43,7 +47,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@types/vscode": "^1.96.0",
