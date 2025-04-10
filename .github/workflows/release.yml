@@ -34,11 +34,23 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
         
+      - name: 读取版本Changelog
+        id: changelog
+        run: |
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          # 提取对应版本的Changelog内容
+          CHANGELOG_CONTENT=$(awk "/## \\[$VERSION\\]/,/## \\[|$/{print}" CHANGELOG.md | sed -n "/## \\[$VERSION\\]/,/## \\[|$/p" | sed "/## \\[.*\\]/d")
+          # 转换为多行字符串
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG_CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        
       - name: 创建Release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          name: 版本 ${{ steps.get_version.outputs.VERSION }}
+          name: v${{ steps.get_version.outputs.VERSION }}
+          body: ${{ steps.changelog.outputs.CHANGELOG }}
           draft: false
           prerelease: ${{ contains(github.ref, 'beta') }}
           files: "*.vsix"
