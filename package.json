@@ -1,0 +1,54 @@
+{
+  "name": "arthas-for-vscode",
+  "displayName": "Arthas for VSCode",
+  "description": "右键复制Arthas watch命令",
+  "version": "1.0.0",
+  "publisher": "arthas-team",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "extensionDependencies": [
+    "redhat.java"
+  ],
+  "activationEvents": [
+    "onLanguage:java"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "arthas-for-vscode.copyWatchCommand",
+        "title": "复制 Arthas watch 命令"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceLangId == java",
+          "command": "arthas-for-vscode.copyWatchCommand",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/vscode": "^1.96.0",
+    "@vscode/vsce": "^3.3.2",
+    "typescript": "^5.8.3",
+    "vscode-test": "^1.6.1"
+  }
+}
