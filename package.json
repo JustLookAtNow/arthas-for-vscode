@@ -2,7 +2,7 @@
   "name": "arthas-for-vscode",
   "displayName": "Arthas for VSCode",
   "description": "右键快捷复制Arthas watch命令",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "JustLookAtNow",
   "repository": {
     "type": "git",

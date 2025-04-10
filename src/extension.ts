@@ -65,127 +65,160 @@ async function getMethodInfoFromJavaExtension(editor: vscode.TextEditor): Promis
         const position = editor.selection.active;
         const document = editor.document;
 
-        // 尝试获取Java符号信息
-        try {
-            // 获取位置的定义
-            const definitions = await vscode.commands.executeCommand<vscode.Location[]>(
-                'vscode.executeDefinitionProvider',
-                document.uri,
-                position
-            );
+        // 优化调用顺序，先使用能识别方法调用的函数
+        // 1. 首先尝试定义提供器（最适合识别方法调用）
+        let result = await tryGetMethodInfoFromDefinitionProvider(document, position);
+        if (result) {
+            return result;
+        }
 
-            if (definitions && definitions.length > 0) {
-                // 获取目标文档（可能是其他类）
-                const targetUri = definitions[0].uri;
-                const targetPosition = definitions[0].range.start;
+        // 2. 尝试从悬停提供器获取信息（对于方法调用很有效）
+        result = await tryGetMethodInfoFromHoverProvider(document, position);
+        if (result) {
+            return result;
+        }
 
-                // 打开目标文档以获取内容（不显示给用户）
-                const targetDocument = await vscode.workspace.openTextDocument(targetUri);
+        // 3. 尝试使用Java类型信息
+        result = await tryGetMethodInfoFromTypeHierarchy(document, position);
+        if (result) {
+            return result;
+        }
 
-                // 获取符号信息
-                const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
-                    'vscode.executeDocumentSymbolProvider',
-                    targetUri
-                );
+        // 4. 最后才尝试文档符号（通常只能识别方法定义而非调用）
+        result = await tryGetMethodInfoFromDocumentSymbols(document, position);
+        if (result) {
+            return result;
+        }
 
-                if (symbols && symbols.length > 0) {
-                    // 查找与定义位置匹配的方法符号
-                    const methodSymbol = findSymbolAtPosition(symbols, targetPosition);
-                    if (methodSymbol &&
-                        (methodSymbol.kind === vscode.SymbolKind.Method ||
-                            methodSymbol.kind === vscode.SymbolKind.Function ||
-                            methodSymbol.kind === vscode.SymbolKind.Constructor)) {
+        return null;
+    } catch (error) {
+        console.error('获取Java语言服务信息时出错:', error);
+        return null;
+    }
+}
 
-                        // 提取简单方法名（去掉括号和参数）
-                        let methodName = methodSymbol.name;
-                        if (methodName.includes('(')) {
-                            methodName = methodName.substring(0, methodName.indexOf('('));
-                        }
+// 从文档符号获取方法信息
+async function tryGetMethodInfoFromDocumentSymbols(document: vscode.TextDocument, position: vscode.Position): Promise<{ fullClassName: string, methodName: string } | null> {
+    try {
+        const docSymbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
+            'vscode.executeDocumentSymbolProvider',
+            document.uri
+        );
 
-                        // 获取目标文件的类的完整路径
-                        const fullClassName = await getFullClassName(targetDocument);
-                        if (fullClassName) {
-                            return {
-                                fullClassName,
-                                methodName
-                            };
-                        }
+        if (docSymbols && docSymbols.length > 0) {
+            const methodSymbol = findSymbolAtPosition(docSymbols, position);
+            if (methodSymbol &&
+                (methodSymbol.kind === vscode.SymbolKind.Method ||
+                    methodSymbol.kind === vscode.SymbolKind.Function ||
+                    methodSymbol.kind === vscode.SymbolKind.Constructor)) {
+
+                // 提取简单方法名（去掉括号和参数）
+                let methodName = methodSymbol.name;
+                if (methodName.includes('(')) {
+                    methodName = methodName.substring(0, methodName.indexOf('('));
+                }
+
+                // 获取类的完整路径
+                const fullClassName = await getFullClassName(document);
+                if (fullClassName) {
+                    return {
+                        fullClassName,
+                        methodName
+                    };
+                }
+            }
+        }
+        return null;
+    } catch (error) {
+        console.error('从文档符号获取方法信息失败:', error);
+        return null;
+    }
+}
+
+// 从定义提供器获取方法信息
+async function tryGetMethodInfoFromDefinitionProvider(document: vscode.TextDocument, position: vscode.Position): Promise<{ fullClassName: string, methodName: string } | null> {
+    try {
+        // 首先尝试在当前位置检测是否是一个方法调用
+        const line = document.lineAt(position.line).text;
+        const cursorPosition = position.character;
+
+        // 查找光标前后位置的方法调用 - 如 xxx.methodName(...)
+        const methodCallBeforeCursor = line.substring(0, cursorPosition).match(/([a-zA-Z0-9_$]+)(?:\s*\((?:[^()]|\([^()]*\))*)?$/);
+        const methodCallAfterCursor = line.substring(cursorPosition).match(/^(?:[^()]|\([^()]*\))*\)/);
+
+        // 如果光标位于方法调用内
+        const isInMethodCall = methodCallBeforeCursor && methodCallAfterCursor;
+
+        // 识别常见的Map方法调用模式
+        if (isInMethodCall && methodCallBeforeCursor) {
+            const methodName = methodCallBeforeCursor[1];
+            if (['put', 'get', 'remove', 'containsKey', 'entrySet', 'keySet', 'values', 'putAll', 'putIfAbsent'].includes(methodName)) {
+                // 获取代码上下文，查找是否在操作Map对象
+                const lineText = document.lineAt(position.line).text;
+                const mapVariableMatch = lineText.match(/(\w+)\s*\.\s*${methodName}/);
+
+                // 查找变量声明以确认是否为Map
+                if (mapVariableMatch) {
+                    const variableName = mapVariableMatch[1];
+                    // 在文件中查找该变量的声明
+                    const fileText = document.getText();
+                    const mapDeclarationRegex = new RegExp(`(Map|HashMap|TreeMap|LinkedHashMap|ConcurrentHashMap)<.*>\\s+${variableName}\\s*=`, 'i');
+                    if (fileText.match(mapDeclarationRegex)) {
+                        return {
+                            fullClassName: 'java.util.HashMap',
+                            methodName
+                        };
                     }
+                }
+
+                // 通用检测：在当前代码行，检查常见Map方法组合
+                if (/\.(put|get|remove|containsKey)\s*\(/.test(lineText) &&
+                    !/(String|StringBuilder|List|Set|Collection|Queue|Deque|Array)\.(put|get|remove|containsKey)\s*\(/.test(lineText)) {
+                    return {
+                        fullClassName: 'java.util.HashMap',
+                        methodName
+                    };
+                }
+            }
+        }
+
+        // 获取方法调用的定义位置
+        const definitions = await vscode.commands.executeCommand<vscode.Location[]>(
+            'vscode.executeDefinitionProvider',
+            document.uri,
+            position
+        );
+
+        if (definitions && definitions.length > 0) {
+            // 获取目标文档（可能是其他类）
+            const targetUri = definitions[0].uri;
+            const targetPosition = definitions[0].range.start;
+
+            // 针对Map接口方法的特殊处理
+            if (targetUri.fsPath.includes('Map.java') ||
+                targetUri.fsPath.includes('HashMap.java') ||
+                targetUri.fsPath.includes('AbstractMap.java')) {
+
+                if (isInMethodCall && methodCallBeforeCursor) {
+                    return {
+                        fullClassName: 'java.util.HashMap',
+                        methodName: methodCallBeforeCursor[1]
+                    };
                 }
             }
 
-            // 如果上面的方法失败，尝试使用Java类型信息
-            const typeInfo = await vscode.commands.executeCommand<any[]>(
-                'java.execute.workspaceCommand',
-                'java.execute.resolveTypeHierarchy',
-                document.uri.toString(),
-                position.line,
-                position.character
-            );
+            // 打开目标文档以获取内容（不显示给用户）
+            const targetDocument = await vscode.workspace.openTextDocument(targetUri);
 
-            if (typeInfo && typeInfo.length > 0) {
-                // 尝试提取方法名和类名
-                const hoveredInfo = await vscode.commands.executeCommand<vscode.Hover[]>(
-                    'vscode.executeHoverProvider',
-                    document.uri,
-                    position
-                );
-
-                if (hoveredInfo && hoveredInfo.length > 0) {
-                    const hoverText = hoveredInfo[0].contents.map(content => {
-                        if (typeof content === 'string') {
-                            return content;
-                        } else {
-                            return content.value;
-                        }
-                    }).join('\n');
-
-                    // 从悬停信息中提取方法名和类名
-                    const methodMatch = hoverText.match(/([a-zA-Z0-9_$]+)\s*\(/);
-                    const classMatch = hoverText.match(/([a-zA-Z0-9_$.]+)\.([a-zA-Z0-9_$]+)\s*\(/);
-
-                    if (methodMatch) {
-                        let methodName = methodMatch[1];
-                        let fullClassName = '';
-
-                        if (classMatch && classMatch[1]) {
-                            fullClassName = classMatch[1];
-                        } else {
-                            // 尝试从typeInfo中获取类名
-                            for (const info of typeInfo) {
-                                if (info.fullyQualifiedName) {
-                                    fullClassName = info.fullyQualifiedName;
-                                    break;
-                                }
-                            }
-
-                            // 如果还是没有找到，使用当前文档的类名
-                            if (!fullClassName) {
-                                const currentClassName = await getFullClassName(document);
-                                if (currentClassName) {
-                                    fullClassName = currentClassName;
-                                }
-                            }
-                        }
-
-                        if (fullClassName) {
-                            return {
-                                fullClassName,
-                                methodName
-                            };
-                        }
-                    }
-                }
-            }
-
-            // 如果上面的方法都失败，尝试使用文档符号提供器作为回退方法
-            const docSymbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
+            // 获取符号信息
+            const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
                 'vscode.executeDocumentSymbolProvider',
-                document.uri
+                targetUri
             );
 
-            if (docSymbols && docSymbols.length > 0) {
-                const methodSymbol = findSymbolAtPosition(docSymbols, position);
+            if (symbols && symbols.length > 0) {
+                // 查找与定义位置匹配的方法符号
+                const methodSymbol = findSymbolAtPosition(symbols, targetPosition);
                 if (methodSymbol &&
                     (methodSymbol.kind === vscode.SymbolKind.Method ||
                         methodSymbol.kind === vscode.SymbolKind.Function ||
@@ -197,7 +230,233 @@ async function getMethodInfoFromJavaExtension(editor: vscode.TextEditor): Promis
                         methodName = methodName.substring(0, methodName.indexOf('('));
                     }
 
-                    // 获取类的完整路径
+                    // 如果是Map接口的方法，使用HashMap作为类名
+                    if (targetUri.fsPath.includes('Map.java') ||
+                        targetUri.fsPath.includes('HashMap.java') ||
+                        targetUri.fsPath.includes('AbstractMap.java')) {
+                        return {
+                            fullClassName: 'java.util.HashMap',
+                            methodName
+                        };
+                    }
+
+                    // 获取目标文件的类的完整路径
+                    const fullClassName = await getFullClassName(targetDocument);
+                    if (fullClassName) {
+                        return {
+                            fullClassName,
+                            methodName
+                        };
+                    }
+                }
+            }
+
+            // 如果无法从符号获取，尝试从文件名和位置推断
+            const fileName = path.basename(targetUri.fsPath, '.java');
+            // 修复Map.java或HashMap.java的特殊处理
+            if (fileName === 'Map' || fileName === 'HashMap' || fileName === 'AbstractMap') {
+                if (isInMethodCall && methodCallBeforeCursor) {
+                    return {
+                        fullClassName: 'java.util.HashMap',
+                        methodName: methodCallBeforeCursor[1]
+                    };
+                }
+            }
+
+            // 尝试从当前行获取方法名
+            const targetLine = (await targetDocument.getText(new vscode.Range(
+                targetPosition.line, 0,
+                targetPosition.line, 1000
+            ))).trim();
+
+            const methodMatch = targetLine.match(/(?:public|private|protected)?\s+\w+\s+(\w+)\s*\(/);
+            if (methodMatch) {
+                const methodName = methodMatch[1];
+                const packageMatch = targetDocument.getText().match(/package\s+([\w.]+)\s*;/);
+                if (packageMatch) {
+                    // 修复Map接口的特殊处理
+                    if (fileName === 'Map' || fileName === 'HashMap' || fileName === 'AbstractMap') {
+                        return {
+                            fullClassName: 'java.util.HashMap',
+                            methodName
+                        };
+                    }
+
+                    return {
+                        fullClassName: `${packageMatch[1]}.${fileName}`,
+                        methodName
+                    };
+                }
+            }
+        }
+
+        // 如果使用定义提供器失败，但确实处于方法调用中，尝试直接从当前行提取信息
+        if (isInMethodCall && methodCallBeforeCursor) {
+            const methodName = methodCallBeforeCursor[1];
+
+            // 对于Map方法的特殊处理
+            if (['put', 'get', 'remove', 'containsKey', 'putAll', 'putIfAbsent', 'size', 'isEmpty', 'clear', 'entrySet', 'keySet', 'values'].includes(methodName)) {
+                const lineText = document.lineAt(position.line).text;
+                // 如果调用了这些方法，很有可能是Map接口
+                if (!/(String|StringBuilder|List|Set|Collection|Queue|Deque|Array)\.(put|get|remove|containsKey)\s*\(/.test(lineText)) {
+                    return {
+                        fullClassName: 'java.util.HashMap',
+                        methodName
+                    };
+                }
+            }
+
+            // 尝试从代码上下文推断类名
+            // 1. 检查是否有明确的类引用，如 SomeClass.methodName
+            const classMethodPattern = new RegExp(`([A-Za-z0-9_$.]+)\\.${methodName}\\s*\\(`);
+            const classMatch = line.match(classMethodPattern);
+
+            if (classMatch && classMatch[1]) {
+                // 可能是静态方法调用或者有变量引用
+                const className = classMatch[1];
+
+                // 检查是不是一个已知的Java类或接口
+                // 优先处理Map等常见集合接口
+                if (/Map|HashMap|TreeMap|ConcurrentHashMap|LinkedHashMap/.test(className)) {
+                    return {
+                        fullClassName: 'java.util.HashMap',
+                        methodName
+                    };
+                } else if (/List|ArrayList|LinkedList/.test(className)) {
+                    return {
+                        fullClassName: 'java.util.List',
+                        methodName
+                    };
+                } else if (/Set|HashSet|TreeSet/.test(className)) {
+                    return {
+                        fullClassName: 'java.util.Set',
+                        methodName
+                    };
+                }
+
+                // 尝试在当前文件中找到变量定义
+                const importMatches = Array.from(document.getText().matchAll(/import\s+([\w.]+)\.([^;]+);/g));
+                for (const importMatch of importMatches) {
+                    if (importMatch[2] === className || importMatch[2] === '*') {
+                        // 可能找到了类的导入
+                        const possibleClassName = `${importMatch[1]}.${className}`;
+                        return {
+                            fullClassName: possibleClassName,
+                            methodName
+                        };
+                    }
+                }
+            }
+
+            // 2. 对于this.method()调用，使用当前类
+            if (line.includes('this.' + methodName)) {
+                const currentClassName = await getFullClassName(document);
+                if (currentClassName) {
+                    return {
+                        fullClassName: currentClassName,
+                        methodName
+                    };
+                }
+            }
+        }
+
+        return null;
+    } catch (error) {
+        console.error('从定义提供器获取方法信息失败:', error);
+        return null;
+    }
+}
+
+// 尝试使用Java类型层次结构（安全地调用，避免错误）
+async function tryGetMethodInfoFromTypeHierarchy(document: vscode.TextDocument, position: vscode.Position): Promise<{ fullClassName: string, methodName: string } | null> {
+    try {
+        // 使用try-catch包裹可能会失败的命令调用
+        let typeInfo: any[] | undefined;
+        try {
+            typeInfo = await vscode.commands.executeCommand<any[]>(
+                'java.execute.workspaceCommand',
+                'java.execute.resolveTypeHierarchy',
+                document.uri.toString(),
+                position.line,
+                position.character
+            );
+        } catch (error) {
+            // 这个命令可能不存在或失败，静默忽略并继续其他方法
+            console.log('类型层次结构解析失败（可忽略）:', error);
+            return null;
+        }
+
+        if (!typeInfo || typeInfo.length === 0) {
+            return null;
+        }
+
+        // 尝试从类型信息中提取类名
+        let fullClassName = '';
+        for (const info of typeInfo) {
+            if (info.fullyQualifiedName) {
+                fullClassName = info.fullyQualifiedName;
+                break;
+            }
+        }
+
+        if (!fullClassName) {
+            return null;
+        }
+
+        // 尝试从当前位置或周围文本获取方法名
+        const line = document.lineAt(position.line).text;
+        const methodNameMatch = line.match(/\b(\w+)\s*\(/);
+
+        if (methodNameMatch) {
+            return {
+                fullClassName,
+                methodName: methodNameMatch[1]
+            };
+        }
+
+        return null;
+    } catch (error) {
+        console.error('从类型层次结构获取方法信息失败:', error);
+        return null;
+    }
+}
+
+// 从悬停提供器获取方法信息
+async function tryGetMethodInfoFromHoverProvider(document: vscode.TextDocument, position: vscode.Position): Promise<{ fullClassName: string, methodName: string } | null> {
+    try {
+        const hoveredInfo = await vscode.commands.executeCommand<vscode.Hover[]>(
+            'vscode.executeHoverProvider',
+            document.uri,
+            position
+        );
+
+        if (hoveredInfo && hoveredInfo.length > 0) {
+            const hoverText = hoveredInfo[0].contents.map(content => {
+                if (typeof content === 'string') {
+                    return content;
+                } else {
+                    return content.value;
+                }
+            }).join('\n');
+
+            // 对Map/HashMap的特殊处理
+            if (hoverText.includes('Map') || hoverText.includes('HashMap') || hoverText.includes('java.util.Map')) {
+                const mapMethodMatch = hoverText.match(/(get|put|remove|containsKey|entrySet|keySet|values|size|isEmpty|clear|putAll|putIfAbsent)\s*\(/);
+                if (mapMethodMatch) {
+                    return {
+                        fullClassName: 'java.util.HashMap',
+                        methodName: mapMethodMatch[1]
+                    };
+                }
+            }
+
+            // 特殊处理Lombok生成的方法
+            if (hoverText.includes('lombok.') || hoverText.includes('@Getter') || hoverText.includes('@Setter')) {
+                // 检测是否为getter/setter方法
+                const methodMatch = hoverText.match(/([a-zA-Z0-9_$]+)\s*\(/);
+                if (methodMatch) {
+                    const methodName = methodMatch[1];
+                    // 获取当前类名
                     const fullClassName = await getFullClassName(document);
                     if (fullClassName) {
                         return {
@@ -208,13 +467,32 @@ async function getMethodInfoFromJavaExtension(editor: vscode.TextEditor): Promis
                 }
             }
 
-            return null;
-        } catch (error) {
-            console.error('获取Java符号信息失败:', error);
-            return null;
+            // 常规方法提取
+            const methodMatch = hoverText.match(/([a-zA-Z0-9_$]+)\s*\(/);
+            const classMatch = hoverText.match(/([a-zA-Z0-9_$.]+)\.([a-zA-Z0-9_$]+)\s*\(/);
+
+            if (methodMatch) {
+                let methodName = methodMatch[1];
+                let fullClassName = '';
+
+                if (classMatch && classMatch[1]) {
+                    fullClassName = classMatch[1];
+                } else {
+                    // 如果找不到类名，使用当前文档的类名
+                    fullClassName = await getFullClassName(document) || '';
+                }
+
+                if (fullClassName) {
+                    return {
+                        fullClassName,
+                        methodName
+                    };
+                }
+            }
         }
+        return null;
     } catch (error) {
-        console.error('获取Java语言服务信息时出错:', error);
+        console.error('从悬停提供器获取方法信息失败:', error);
         return null;
     }
 }
