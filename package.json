@@ -26,24 +26,35 @@
     "commands": [
       {
         "command": "arthas-for-vscode.copyWatchCommand",
-        "title": "Copy Arthas watch command"
+        "title": "watch"
       },
       {
         "command": "arthas-for-vscode.copyJadCommand",
-        "title": "Copy Arthas jad command"
+        "title": "jad"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "arthas-for-vscode.arthasCommands",
+        "label": "Copy Arthas command"
       }
     ],
     "menus": {
       "editor/context": [
         {
           "when": "resourceLangId == java",
+          "submenu": "arthas-for-vscode.arthasCommands",
+          "group": "navigation"
+        }
+      ],
+      "arthas-for-vscode.arthasCommands": [
+        {
           "command": "arthas-for-vscode.copyWatchCommand",
-          "group": "ArthasCommands@1"
+          "group": "1_arthas@1"
         },
         {
-          "when": "resourceLangId == java",
           "command": "arthas-for-vscode.copyJadCommand",
-          "group": "ArthasCommands@2"
+          "group": "1_arthas@2"
         }
       ]
     }
@@ -59,9 +70,12 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^22.14.0",
     "@types/vscode": "^1.96.0",
     "@vscode/vsce": "^3.3.2",
+    "mocha": "^11.1.0",
     "typescript": "^5.8.3",
     "vscode-test": "^1.6.1"
   }
