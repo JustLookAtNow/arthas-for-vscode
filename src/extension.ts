@@ -4,8 +4,8 @@ import * as fs from 'fs';
 
 // 激活扩展
 export function activate(context: vscode.ExtensionContext) {
-    // 注册命令
-    let disposable = vscode.commands.registerCommand('arthas-for-vscode.copyWatchCommand', async () => {
+    // 注册watch命令
+    let watchDisposable = vscode.commands.registerCommand('arthas-for-vscode.copyWatchCommand', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             vscode.window.showErrorMessage('No active editor');
@@ -38,7 +38,40 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    context.subscriptions.push(disposable);
+    // 注册jad命令
+    let jadDisposable = vscode.commands.registerCommand('arthas-for-vscode.copyJadCommand', async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showErrorMessage('No active editor');
+            return;
+        }
+
+        // 确保是 Java 文件
+        if (editor.document.languageId !== 'java') {
+            vscode.window.showErrorMessage('Not a Java file');
+            return;
+        }
+
+        try {
+            // 获取当前类的全限定名
+            const fullClassName = await getFullClassName(editor.document);
+            if (!fullClassName) {
+                vscode.window.showErrorMessage('Cannot recognize class name. Please make sure this is a valid Java class file');
+                return;
+            }
+
+            // 构建 Arthas jad 命令
+            const jadCommand = `jad ${fullClassName}`;
+
+            // 复制到剪贴板
+            await vscode.env.clipboard.writeText(jadCommand);
+            vscode.window.showInformationMessage(`Arthas jad command copied: ${jadCommand}`);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error: ${error}`);
+        }
+    });
+
+    context.subscriptions.push(watchDisposable, jadDisposable);
 }
 
 // 从Java语言服务获取方法信息

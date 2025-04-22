@@ -27,6 +27,10 @@
       {
         "command": "arthas-for-vscode.copyWatchCommand",
         "title": "Copy Arthas watch command"
+      },
+      {
+        "command": "arthas-for-vscode.copyJadCommand",
+        "title": "Copy Arthas jad command"
       }
     ],
     "menus": {
@@ -34,7 +38,12 @@
         {
           "when": "resourceLangId == java",
           "command": "arthas-for-vscode.copyWatchCommand",
-          "group": "navigation"
+          "group": "ArthasCommands@1"
+        },
+        {
+          "when": "resourceLangId == java",
+          "command": "arthas-for-vscode.copyJadCommand",
+          "group": "ArthasCommands@2"
         }
       ]
     }
