@@ -1,6 +1,6 @@
 # Arthas for VSCode
 
-VSCode插件，用于快速复制Arthas的watch命令。
+VSCode插件，用于快速复制Arthas命令。
 
 ## 安装
 
@@ -16,18 +16,32 @@ VSCode插件，用于快速复制Arthas的watch命令。
 
 ## 功能
 
-在Java文件中，当右键点击方法名或在方法体内时，通过右键菜单可以复制对应的Arthas watch命令。
+在Java文件中，当右键点击时，可以访问"Copy Arthas command"菜单，包含以下选项：
+
+1. **watch** - 复制当前方法的Arthas watch命令
+2. **jad** - 复制当前类的Arthas jad反编译命令
 
 ## 使用方法
 
+### Watch命令
+
 1. 打开Java文件
-2. 以下三种方式可以使用：
-   - 选中方法名，然后右键选择"复制 Arthas watch 命令"
-   - 将光标放在方法声明行，然后右键选择"复制 Arthas watch 命令"
-   - 将光标放在方法体内的任意位置，然后右键选择"复制 Arthas watch 命令"
+2. 以下三种方式可以使用watch命令：
+   - 选中方法名，然后右键选择"Copy Arthas command" > "watch"
+   - 将光标放在方法声明行，然后右键选择"Copy Arthas command" > "watch"
+   - 将光标放在方法体内的任意位置，然后右键选择"Copy Arthas command" > "watch"
 3. 命令会被复制到剪贴板中，格式为：
    ```
    watch 完整类路径 方法名 '{params,returnObj,throwExp}'  -n 5  -x 3
+   ```
+
+### Jad命令
+
+1. 打开Java文件
+2. 在文件中任意位置右键选择"Copy Arthas command" > "jad"
+3. 命令会被复制到剪贴板中，格式为：
+   ```
+   jad 完整类路径
    ```
 
 ## 要求

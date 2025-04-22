@@ -1,6 +1,6 @@
 # Arthas for VSCode
 
-VSCode extension for quickly copying Arthas watch commands.
+VSCode extension for quickly copying Arthas commands.
 
 [中文文档](./README-cn.md)
 
@@ -18,18 +18,32 @@ There are two installation methods:
 
 ## Features
 
-In Java files, when right-clicking on a method name or within a method body, you can copy the corresponding Arthas watch command through the context menu.
+In Java files, when right-clicking, you can access the "Copy Arthas command" menu with the following options:
+
+1. **watch** - Copy Arthas watch command for the current method
+2. **jad** - Copy Arthas jad command to decompile the current class
 
 ## Usage
 
+### Watch Command
+
 1. Open a Java file
-2. You can use the extension in three ways:
-   - Select a method name, then right-click and choose "Copy Arthas watch command"
-   - Place the cursor on the method declaration line, then right-click and choose "Copy Arthas watch command"
-   - Place the cursor anywhere within the method body, then right-click and choose "Copy Arthas watch command"
+2. You can use the watch command in three ways:
+   - Select a method name, then right-click and choose "Copy Arthas command" > "watch"
+   - Place the cursor on the method declaration line, then right-click and choose "Copy Arthas command" > "watch"
+   - Place the cursor anywhere within the method body, then right-click and choose "Copy Arthas command" > "watch"
 3. The command will be copied to your clipboard in the format:
    ```
    watch fully.qualified.ClassName methodName '{params,returnObj,throwExp}' -n 5 -x 3
+   ```
+
+### Jad Command
+
+1. Open a Java file
+2. Right-click anywhere in the file and choose "Copy Arthas command" > "jad"
+3. The command will be copied to your clipboard in the format:
+   ```
+   jad fully.qualified.ClassName
    ```
 
 ## Requirements

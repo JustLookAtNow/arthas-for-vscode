@@ -1,28 +1,35 @@
-# 更新日志
+# Changelog
 
-所有版本的变更记录将在此文件中记录。
+All notable changes to this project will be documented in this file.
+
+## [1.1.0] - 2025-04-22
+
+### Added
+
+- Added "Copy Arthas jad command" functionality to quickly copy decompile command for current class
+- Optimized menu structure with "Copy Arthas command" hierarchical menu containing watch and jad subcommands
 
 ## [1.0.2] - 2025-04-10
 
-### 新增
+### Added
 
-- 增加图标
+- Added icon
 
 ## [1.0.1] - 2025-04-10
 
-### 优化
+### Improved
 
-- 支持Lombok生成的get和set方法的watch命令复制
-- 修复了HashMap等集合类的方法识别问题
-- 增强了方法调用识别的准确性
+- Added support for Lombok-generated getter and setter methods
+- Fixed method recognition issues for HashMap and other collection classes
+- Enhanced the accuracy of method call recognition
 
 ## [1.0.0] - 2025-04-09
 
-### 新增
+### Added
 
-- 初始版本发布
-- 右键菜单中添加"复制 Arthas watch 命令"选项
-- 支持三种使用方式：
-  - 选中方法名，然后右键选择"复制 Arthas watch 命令"
-  - 将光标放在方法声明行，然后右键选择"复制 Arthas watch 命令"
-  - 将光标放在方法体内的任意位置，然后右键选择"复制 Arthas watch 命令" 
+- Initial version released
+- Added "Copy Arthas watch command" option to the context menu
+- Supports three usage methods:
+  - Select a method name, then right-click and choose "Copy Arthas watch command"
+  - Place cursor on the method declaration line, then right-click and choose "Copy Arthas watch command"
+  - Place cursor anywhere within the method body, then right-click and choose "Copy Arthas watch command" 
