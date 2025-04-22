@@ -1,7 +1,7 @@
 {
   "name": "arthas-for-vscode",
   "displayName": "Arthas for VSCode",
-  "description": "右键快捷复制Arthas watch命令",
+  "description": "Right-click to quickly copy Arthas watch commands",
   "version": "1.0.2",
   "icon": "images/ar.png",
   "publisher": "JustLookAtNow",
@@ -26,7 +26,7 @@
     "commands": [
       {
         "command": "arthas-for-vscode.copyWatchCommand",
-        "title": "复制 Arthas watch 命令"
+        "title": "Copy Arthas watch command"
       }
     ],
     "menus": {

@@ -8,13 +8,13 @@ export function activate(context: vscode.ExtensionContext) {
     let disposable = vscode.commands.registerCommand('arthas-for-vscode.copyWatchCommand', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
-            vscode.window.showErrorMessage('没有打开的编辑器');
+            vscode.window.showErrorMessage('No active editor');
             return;
         }
 
         // 确保是 Java 文件
         if (editor.document.languageId !== 'java') {
-            vscode.window.showErrorMessage('不是 Java 文件');
+            vscode.window.showErrorMessage('Not a Java file');
             return;
         }
 
@@ -23,7 +23,7 @@ export function activate(context: vscode.ExtensionContext) {
             const methodInfo = await getMethodInfoFromJavaExtension(editor);
 
             if (!methodInfo) {
-                vscode.window.showErrorMessage('无法识别方法，请确保光标位于方法内部或方法名上，且已安装Java扩展');
+                vscode.window.showErrorMessage('Cannot recognize method. Please make sure the cursor is inside a method or on a method name, and Java extension is installed');
                 return;
             }
 
@@ -32,9 +32,9 @@ export function activate(context: vscode.ExtensionContext) {
 
             // 复制到剪贴板
             await vscode.env.clipboard.writeText(watchCommand);
-            vscode.window.showInformationMessage(`Arthas watch 命令已复制: ${watchCommand}`);
+            vscode.window.showInformationMessage(`Arthas watch command copied: ${watchCommand}`);
         } catch (error) {
-            vscode.window.showErrorMessage(`错误: ${error}`);
+            vscode.window.showErrorMessage(`Error: ${error}`);
         }
     });
 
@@ -47,7 +47,7 @@ async function getMethodInfoFromJavaExtension(editor: vscode.TextEditor): Promis
         // 检查Java语言扩展是否激活
         const javaExt = vscode.extensions.getExtension('redhat.java');
         if (!javaExt) {
-            vscode.window.showErrorMessage('未安装Java扩展（Language Support for Java by Red Hat），请先安装该扩展');
+            vscode.window.showErrorMessage('Java extension (Language Support for Java by Red Hat) is not installed. Please install it first');
             return null;
         }
 
@@ -56,7 +56,7 @@ async function getMethodInfoFromJavaExtension(editor: vscode.TextEditor): Promis
             try {
                 await javaExt.activate();
             } catch (error) {
-                console.error('激活Java扩展失败:', error);
+                console.error('Failed to activate Java extension:', error);
                 return null;
             }
         }
@@ -92,7 +92,7 @@ async function getMethodInfoFromJavaExtension(editor: vscode.TextEditor): Promis
 
         return null;
     } catch (error) {
-        console.error('获取Java语言服务信息时出错:', error);
+        console.error('Error getting Java language service information:', error);
         return null;
     }
 }
@@ -130,7 +130,7 @@ async function tryGetMethodInfoFromDocumentSymbols(document: vscode.TextDocument
         }
         return null;
     } catch (error) {
-        console.error('从文档符号获取方法信息失败:', error);
+        console.error('Failed to get method information from document symbols:', error);
         return null;
     }
 }
@@ -362,7 +362,7 @@ async function tryGetMethodInfoFromDefinitionProvider(document: vscode.TextDocum
 
         return null;
     } catch (error) {
-        console.error('从定义提供器获取方法信息失败:', error);
+        console.error('Failed to get method information from definition provider:', error);
         return null;
     }
 }
@@ -382,7 +382,7 @@ async function tryGetMethodInfoFromTypeHierarchy(document: vscode.TextDocument, 
             );
         } catch (error) {
             // 这个命令可能不存在或失败，静默忽略并继续其他方法
-            console.log('类型层次结构解析失败（可忽略）:', error);
+            console.log('Type hierarchy resolution failed (can be ignored):', error);
             return null;
         }
 
@@ -416,7 +416,7 @@ async function tryGetMethodInfoFromTypeHierarchy(document: vscode.TextDocument, 
 
         return null;
     } catch (error) {
-        console.error('从类型层次结构获取方法信息失败:', error);
+        console.error('Failed to get method information from type hierarchy:', error);
         return null;
     }
 }
@@ -492,7 +492,7 @@ async function tryGetMethodInfoFromHoverProvider(document: vscode.TextDocument, 
         }
         return null;
     } catch (error) {
-        console.error('从悬停提供器获取方法信息失败:', error);
+        console.error('Failed to get method information from hover provider:', error);
         return null;
     }
 }

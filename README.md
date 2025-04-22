@@ -1,61 +1,63 @@
 # Arthas for VSCode
 
-VSCode插件，用于快速复制Arthas的watch命令。
+VSCode extension for quickly copying Arthas watch commands.
 
-## 安装
+[中文文档](./README-cn.md)
 
-有两种安装方式：
+## Installation
 
-1. 从 VSCode 商店安装
-   - 访问 [VSCode 商店](https://marketplace.visualstudio.com/items?itemName=JustLookAtNow.arthas-for-vscode)
-   - 或直接在 VSCode 扩展中搜索 `JustLookAtNow.arthas-for-vscode`
+There are two installation methods:
 
-2. 手动安装
-   - 从 [Release](https://github.com/JustLookAtNow/arthas-for-vscode/releases) 页面下载最新的 .vsix 文件
-   - 在 VSCode 中选择"从 VSIX 安装"进行安装
+1. Install from VSCode Marketplace
+   - Visit the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=JustLookAtNow.arthas-for-vscode)
+   - Or search directly for `JustLookAtNow.arthas-for-vscode` in VSCode extensions
 
-## 功能
+2. Manual Installation
+   - Download the latest .vsix file from the [Release](https://github.com/JustLookAtNow/arthas-for-vscode/releases) page
+   - Install it in VSCode by selecting "Install from VSIX"
 
-在Java文件中，当右键点击方法名或在方法体内时，通过右键菜单可以复制对应的Arthas watch命令。
+## Features
 
-## 使用方法
+In Java files, when right-clicking on a method name or within a method body, you can copy the corresponding Arthas watch command through the context menu.
 
-1. 打开Java文件
-2. 以下三种方式可以使用：
-   - 选中方法名，然后右键选择"复制 Arthas watch 命令"
-   - 将光标放在方法声明行，然后右键选择"复制 Arthas watch 命令"
-   - 将光标放在方法体内的任意位置，然后右键选择"复制 Arthas watch 命令"
-3. 命令会被复制到剪贴板中，格式为：
+## Usage
+
+1. Open a Java file
+2. You can use the extension in three ways:
+   - Select a method name, then right-click and choose "Copy Arthas watch command"
+   - Place the cursor on the method declaration line, then right-click and choose "Copy Arthas watch command"
+   - Place the cursor anywhere within the method body, then right-click and choose "Copy Arthas watch command"
+3. The command will be copied to your clipboard in the format:
    ```
-   watch 完整类路径 方法名 '{params,returnObj,throwExp}'  -n 5  -x 3
+   watch fully.qualified.ClassName methodName '{params,returnObj,throwExp}' -n 5 -x 3
    ```
 
-## 要求
+## Requirements
 
-- VSCode 1.96.0 或更高版本
+- VSCode 1.96.0 or higher
 
-## 开发
+## Development
 
 ```bash
-# 安装依赖
+# Install dependencies
 npm install
 
-# 编译
+# Compile
 npm run compile
 
-# 打包
+# Package
 npm run vscode:prepublish
 ```
 
-## 发布
+## Publishing
 
 ```bash
-# 安装 vsce
+# Install vsce
 npm install -g vsce
 
-# 打包
+# Package
 vsce package
 
-# 发布
+# Publish
 vsce publish
 ``` 
