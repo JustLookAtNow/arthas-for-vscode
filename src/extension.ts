@@ -99,14 +99,13 @@ async function getMethodInfoFromJavaExtension(editor: vscode.TextEditor): Promis
         const document = editor.document;
 
         // 优化调用顺序，先使用能识别方法调用的函数
-        // 1. 首先尝试定义提供器（最适合识别方法调用）
-        let result = await tryGetMethodInfoFromDefinitionProvider(document, position);
+        // 1. 尝试从悬停提供器获取信息（对于方法调用很有效）
+        let result = await tryGetMethodInfoFromHoverProvider(document, position);
         if (result) {
             return result;
         }
-
-        // 2. 尝试从悬停提供器获取信息（对于方法调用很有效）
-        result = await tryGetMethodInfoFromHoverProvider(document, position);
+        // 2. 首先尝试定义提供器（最适合识别方法调用）
+         result = await tryGetMethodInfoFromDefinitionProvider(document, position);
         if (result) {
             return result;
         }
