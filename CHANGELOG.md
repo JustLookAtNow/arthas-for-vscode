@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2025-06-18
+
+### Changed
+
+- Adjusted the order of method information retrieval: now prioritizes obtaining method info from the hover provider, improving the accuracy of method call recognition.
+
+
 ## [1.1.0] - 2025-04-22
 
 ### Added
