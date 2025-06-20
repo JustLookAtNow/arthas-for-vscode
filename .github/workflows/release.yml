@@ -69,6 +69,9 @@ jobs:
         if: ${{ !contains(github.ref, 'beta') }}
         run: npx vsce publish -p ${{ secrets.VSCODE_PAT }}
 
+      - name: 安装 ovsx
+        run: npm install -g ovsx
+
       - name: 发布到Open VSX
         if: ${{ !contains(github.ref, 'beta') }}
         run: npx ovsx publish -p ${{ secrets.OPEN_VSX_TOKEN }}
